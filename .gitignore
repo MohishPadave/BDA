@@ -1,0 +1,24 @@
+# Virtual environment
+venv/
+ENV/
+env/
+.venv/
+
+# Environment variables & secrets
+.env
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Large datasets (downloadable via python download_data.py)
+data/*.gz
+data/data.txt*
+
+# OS / Editor files
+.DS_Store
+.vscode/
+.idea/
+

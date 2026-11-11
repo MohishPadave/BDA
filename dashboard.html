@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Intel Lab Monitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #eef1f5;
+      --pn: #fff;
+      --ln: #d9dfe7;
+      --tx: #16202e;
+      --mu: #667487;
+      --bad: #c2185b;
+      --ok: #1f9d74
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--tx);
+      font-family: Manrope, system-ui, sans-serif;
+      font-variant-numeric: tabular-nums
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 28px;
+      background: var(--pn);
+      border-bottom: 1px solid var(--ln)
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 700
+    }
+
+    h1 small {
+      display: block;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--mu);
+      margin-top: 2px
+    }
+
+    .seg {
+      display: flex;
+      border: 1px solid var(--ln);
+      border-radius: 8px;
+      overflow: hidden
+    }
+
+    .seg button {
+      border: 0;
+      background: none;
+      padding: 8px 18px;
+      font: 600 14px Manrope, sans-serif;
+      color: var(--mu);
+      cursor: pointer
+    }
+
+    .seg button.on {
+      background: var(--tx);
+      color: #fff
+    }
+
+    .seg button:focus-visible {
+      outline: 2px solid #2a5bd7;
+      outline-offset: -2px
+    }
+
+    .conn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--mu)
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--mu)
+    }
+
+    .live .dot {
+      background: var(--ok)
+    }
+
+    .demo .dot {
+      background: #e0a000
+    }
+
+    .strip {
+      display: flex;
+      flex-wrap: wrap;
+      background: var(--pn);
+      border-bottom: 1px solid var(--ln)
+    }
+
+    .strip div {
+      flex: 1;
+      min-width: 150px;
+      padding: 14px 28px;
+      border-right: 1px solid var(--ln)
+    }
+
+    .strip span {
+      display: block;
+      font-size: 13px;
+      color: var(--mu)
+    }
+
+    .strip b {
+      font-size: 26px;
+      font-weight: 600
+    }
+
+    .strip b.bad {
+      color: var(--bad)
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 20px;
+      padding: 20px 28px
+    }
+
+    .pn {
+      background: var(--pn);
+      border: 1px solid var(--ln);
+      border-radius: 10px;
+      padding: 18px
+    }
+
+    h2 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 12px
+    }
+
+    #plan {
+      position: relative
+    }
+
+    canvas#map {
+      width: 100%;
+      display: block;
+      border-radius: 6px;
+      cursor: pointer
+    }
+
+    #tip {
+      position: absolute;
+      pointer-events: none;
+      background: var(--tx);
+      color: #fff;
+      font-size: 12px;
+      padding: 6px 9px;
+      border-radius: 6px;
+      display: none;
+      white-space: nowrap
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--mu);
+      margin-top: 10px
+    }
+
+    .legend i {
+      height: 8px;
+      width: 180px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #3b6fd8, #2bb3a8, #f2c14e, #e4572e)
+    }
+
+    .zones {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px
+    }
+
+    .z {
+      border: 1px solid var(--ln);
+      border-radius: 8px;
+      padding: 12px 14px
+    }
+
+    .z.bad {
+      border-color: var(--bad);
+      background: #fdf1f6
+    }
+
+    .z p {
+      font-size: 13px;
+      color: var(--mu)
+    }
+
+    .z b {
+      font-size: 24px;
+      font-weight: 600
+    }
+
+    .z small {
+      display: block;
+      font-size: 12px;
+      color: var(--mu);
+      margin-top: 2px
+    }
+
+    .side {
+      display: flex;
+      flex-direction: column;
+      gap: 20px
+    }
+
+    .read {
+      display: flex;
+      gap: 28px;
+      margin-bottom: 8px
+    }
+
+    .read p {
+      font-size: 12px;
+      color: var(--mu)
+    }
+
+    .read b {
+      font-size: 34px;
+      font-weight: 600
+    }
+
+    .read b small {
+      font-size: 15px;
+      color: var(--mu);
+      font-weight: 400;
+      margin-left: 2px
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 99px;
+      background: #e3f5ee;
+      color: var(--ok)
+    }
+
+    .badge.bad {
+      background: #fbe3ee;
+      color: var(--bad)
+    }
+
+    .chartbox {
+      height: 190px;
+      margin-top: 12px
+    }
+
+    .dg {
+      font-size: 13px;
+      color: var(--mu);
+      margin-top: 8px;
+      line-height: 1.4
+    }
+
+    ul {
+      list-style: none;
+      max-height: 300px;
+      overflow: auto
+    }
+
+    li {
+      padding: 9px 0 9px 12px;
+      border-bottom: 1px solid var(--ln);
+      border-left: 3px solid #e0a000;
+      font-size: 13px
+    }
+
+    li.critical {
+      border-left-color: var(--bad)
+    }
+
+    li span {
+      display: block;
+      color: var(--mu);
+      font-size: 12px;
+      margin-top: 2px
+    }
+
+    .kfl li {
+      cursor: pointer;
+      border-left-color: #e0a000
+    }
+
+    .note {
+      font-size: 12px;
+      color: var(--mu);
+      margin-top: 8px
+    }
+
+    @media(max-width:1000px) {
+      main {
+        grid-template-columns: 1fr
+      }
+
+      .zones {
+        grid-template-columns: repeat(2, 1fr)
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Intel Lab Monitor<small>Live floor plan from Kafka and Spark Structured Streaming</small></h1>
+    <div class="seg" role="group" aria-label="Metric"><button id="bT" class="on">Temperature</button><button
+        id="bH">Humidity</button></div>
+    <div class="conn" id="conn"><span class="dot"></span><span id="connTxt">Connecting…</span></div>
+  </header>
+  <div class="strip">
+    <div><span>Motes online</span><b id="kOn">0</b></div>
+    <div><span>Readings processed</span><b id="kTotal">0</b></div>
+    <div><span>Readings per second</span><b id="kRate">0</b></div>
+    <div><span>Faults detected</span><b class="bad" id="kAnom">0</b></div>
+  </div>
+  <main>
+    <div>
+      <div class="pn">
+        <h2 id="mapTitle">Lab floor plan: temperature</h2>
+        <div id="plan"><canvas id="map"></canvas>
+          <div id="tip"></div>
+        </div>
+        <div class="legend"><span id="lgLo">--</span><i></i><span id="lgHi">--</span><span>Pulsing pink: faulty reading.
+            Hollow grey: mote offline.</span></div>
+        <p class="note" id="layoutNote"></p>
+        <div class="zones" id="zones"></div>
+      </div>
+    </div>
+    <div class="side">
+      <div class="pn">
+        <h2 id="sTitle">Select a mote on the map</h2>
+        <div class="read">
+          <div>
+            <p>Temperature</p><b id="sT">--</b>
+          </div>
+          <div>
+            <p>Humidity</p><b id="sH">--</b>
+          </div>
+        </div>
+        <span class="badge" id="sBadge">Normal</span>
+        <div class="chartbox"><canvas id="chart"></canvas></div>
+        <p class="dg" id="sDg"></p>
+      </div>
+      <div class="pn">
+        <h2>Fault alerts</h2>
+        <ul id="alerts"></ul>
+        <p class="note" id="aEmpty">No faults yet. Alerts appear when a reading breaks its baseline or physical limits.
+        </p>
+      </div>
+      <div class="pn">
+        <h2>Known faulty sensors</h2>
+        <ul id="kf" class="kfl"></ul>
+        <p class="note" id="kfNote"></p>
+      </div>
+    </div>
+  </main>
+  <script>
+    const $ = id => document.getElementById(id);
+    const ZN = ['North-west', 'North', 'North-east', 'South-west', 'South', 'South-east'];
+    const DOM = { T: { u: '°C', span: 4, name: 'Temperature' }, H: { u: '%', span: 10, name: 'Humidity' } };
+    const STOPS = [[59, 111, 216], [43, 179, 168], [242, 193, 78], [228, 87, 46]];
+    const M = {}, MAXP = 60, PAD = 34;
+    let BL = { n: 0, fp: 0, m: 0, k: 0 }; const KF = {};
+    let metric = 'T', sel = null, total = 0, anoms = 0, perSec = 0, pos = {}, bounds = null, W = 800, H = 520;
+
+    function ramp(t) { t = Math.max(0, Math.min(1, t)); const k = t * 3, i = Math.min(2, Math.floor(k)), f = k - i, a = STOPS[i], b = STOPS[i + 1]; return a.map((v, j) => Math.round(v + (b[j] - v) * f)); }
+
+    /* ---------- layout ---------- */
+    const cv = $('map'), cx = cv.getContext('2d'), hm = document.createElement('canvas'), hx = hm.getContext('2d');
+    hm.width = 96; hm.height = 64;
+    async function loadLayout() {
+      let list = [], approx = false;
+      try { list = await (await fetch('/api/motes')).json(); } catch (e) { }
+      if (!list.length) { approx = true; for (let i = 1; i <= 54; i++)list.push({ id: i, x: ((i - 1) % 9) * 4.5, y: Math.floor((i - 1) / 9) * 5 }); }
+      list.forEach(p => pos[p.id] = p);
+      $('layoutNote').textContent = approx ? 'Approximate grid layout. Run python download_data.py to fetch the real mote positions.' : 'Mote positions come from the dataset (metres from the upper-right corner). Areas are an automatic 3 by 2 split of the lab.';
+      const xs = list.map(p => p.x), ys = list.map(p => p.y);
+      bounds = { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+      resize();
+    }
+    function resize() {
+      if (!bounds) return;
+      W = cv.parentElement.clientWidth;
+      const sx = bounds.x1 - bounds.x0 || 1, sy = bounds.y1 - bounds.y0 || 1;
+      H = Math.max(W * .45, Math.min(W * .8, (W - 2 * PAD) * sy / sx + 2 * PAD));
+      const d = devicePixelRatio || 1; cv.width = W * d; cv.height = H * d; cv.style.height = H + 'px'; cx.setTransform(d, 0, 0, d, 0, 0);
+    }
+    window.addEventListener('resize', resize);
+    function P(id) {
+      const p = pos[id], sx = bounds.x1 - bounds.x0 || 1, sy = bounds.y1 - bounds.y0 || 1;
+      return [PAD + (bounds.x1 - p.x) / sx * (W - 2 * PAD), PAD + (p.y - bounds.y0) / sy * (H - 2 * PAD)];
+    }
+    function zoneOf(id) {
+      const [x, y] = P(id), w = (W - 2 * PAD + 28) / 3, c = Math.max(0, Math.min(2, Math.floor((x - (PAD - 14)) / w)));
+      return (y < PAD - 14 + (H - 2 * PAD + 28) / 2 ? 0 : 3) + c;
+    }
+
+    /* ---------- heatmap (inverse distance weighting) ---------- */
+    function heat() {
+      const live = Object.values(M).filter(m => pos[m.id] && m[metric] && m[metric].good !== undefined && Date.now() - m.seen < 20000);
+      if (!live.length) return;
+      const vals = live.map(m => m[metric].good); let lo = Math.min(...vals), hi = Math.max(...vals);
+      const sp = DOM[metric].span; if (hi - lo < sp) { const c = (hi + lo) / 2; lo = c - sp / 2; hi = c + sp / 2; }
+      const pts = live.map(m => { const [x, y] = P(m.id); return [x / W * 96, y / H * 64, m[metric].good]; });
+      const img = hx.createImageData(96, 64);
+      for (let gy = 0; gy < 64; gy++)for (let gx = 0; gx < 96; gx++) {
+        let sw = 0, sv = 0, md = 1e9;
+        for (const [px, py, v] of pts) { const d2 = (gx - px) ** 2 + (gy - py) ** 2 + .5; sw += 1 / d2; sv += v / d2; if (d2 < md) md = d2; }
+        const c = ramp((sv / sw - lo) / (hi - lo)), i = (gy * 96 + gx) * 4;
+        img.data[i] = c[0]; img.data[i + 1] = c[1]; img.data[i + 2] = c[2];
+        img.data[i + 3] = Math.round(255 * Math.max(0, Math.min(.85, 1.2 - Math.sqrt(md) / 18)));
+      }
+      hx.putImageData(img, 0, 0);
+      $('lgLo').textContent = lo.toFixed(1) + DOM[metric].u; $('lgHi').textContent = hi.toFixed(1) + DOM[metric].u;
+    }
+
+    /* ---------- drawing ---------- */
+    function draw() {
+      requestAnimationFrame(draw);
+      if (!bounds) return;
+      cx.clearRect(0, 0, W, H); cx.fillStyle = '#f7f9fb'; cx.fillRect(0, 0, W, H);
+      cx.strokeStyle = '#e6ebf1'; cx.lineWidth = 1;
+      for (let x = 0; x < W; x += 40) { cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x, H); cx.stroke(); }
+      for (let y = 0; y < H; y += 40) { cx.beginPath(); cx.moveTo(0, y); cx.lineTo(W, y); cx.stroke(); }
+      cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high'; cx.drawImage(hm, 0, 0, W, H);
+      const x0 = PAD - 14, y0 = PAD - 14, w = W - 2 * PAD + 28, h = H - 2 * PAD + 28;
+      cx.strokeStyle = '#8795a8'; cx.lineWidth = 2; cx.strokeRect(x0, y0, w, h);
+      cx.setLineDash([5, 5]); cx.lineWidth = 1;
+      for (let i = 1; i < 3; i++) { cx.beginPath(); cx.moveTo(x0 + w * i / 3, y0); cx.lineTo(x0 + w * i / 3, y0 + h); cx.stroke(); }
+      cx.beginPath(); cx.moveTo(x0, y0 + h / 2); cx.lineTo(x0 + w, y0 + h / 2); cx.stroke(); cx.setLineDash([]);
+      cx.fillStyle = '#4b5a6e'; cx.font = '600 12px Manrope,sans-serif';
+      ZN.forEach((n, i) => cx.fillText(n, x0 + w * (i % 3) / 3 + 10, y0 + h * Math.floor(i / 3) / 2 + 20));
+      const now = Date.now();
+      for (const id in pos) {
+        const [x, y] = P(id), m = M[id], k = m && m[metric], off = !m || now - m.seen > 20000, bad = !off && k && k.a, s = id == sel;
+        if (bad) { const ph = (now / 60) % 14; cx.strokeStyle = 'rgba(194,24,91,' + (1 - ph / 14) + ')'; cx.lineWidth = 2; cx.beginPath(); cx.arc(x, y, 8 + ph, 0, 7); cx.stroke(); }
+        cx.beginPath(); cx.arc(x, y, s ? 9 : 7, 0, 7); cx.fillStyle = bad ? '#c2185b' : '#fff'; cx.fill();
+        cx.lineWidth = s ? 3 : 2; cx.strokeStyle = off ? '#b3bdca' : bad ? '#c2185b' : '#16202e'; cx.stroke();
+        cx.fillStyle = off ? '#9aa6b6' : '#16202e'; cx.font = '600 10px Manrope,sans-serif'; cx.fillText(id, x + 11, y + 4);
+        if (m && m.kf) { cx.fillStyle = '#e0a000'; cx.fillRect(x + 3, y - 14, 10, 10); cx.fillStyle = '#fff'; cx.font = '700 9px Manrope,sans-serif'; cx.fillText('!', x + 6.5, y - 6); }
+      }
+    }
+    function hit(e) {
+      const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top; let b = null, bd = 14;
+      for (const id in pos) { const [x, y] = P(id), d = Math.hypot(x - mx, y - my); if (d < bd) { bd = d; b = id; } } return b;
+    }
+    const fT = k => k ? k.v + '°C' : '--', fH = k => k ? k.v + '%' : '--';
+    cv.addEventListener('mousemove', e => {
+      const id = hit(e), t = $('tip'); if (!id) { t.style.display = 'none'; return; }
+      const m = M[id]; t.style.display = 'block'; t.style.left = e.offsetX + 14 + 'px'; t.style.top = e.offsetY + 14 + 'px';
+      t.textContent = 'Mote ' + id + (m ? ': ' + fT(m.T) + ', ' + fH(m.H) + (m.kf ? ' (known faulty)' : '') : ' (no data yet)');
+    });
+    cv.addEventListener('mouseleave', () => $('tip').style.display = 'none');
+    cv.addEventListener('click', e => { const id = hit(e); if (id) { sel = id; renderSide(); } });
+
+    /* ---------- data ---------- */
+    const chart = new Chart($('chart'), {
+      type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#2a5bd7', backgroundColor: 'rgba(42,91,215,.08)', fill: true, tension: .3, borderWidth: 2, pointRadius: [], pointBackgroundColor: [] }] },
+      options: { animation: false, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#667487', maxTicksLimit: 5 }, grid: { display: false } }, y: { ticks: { color: '#667487' }, grid: { color: '#e6ebf1' } } } }
+    });
+    function ingest(m) {
+      if (m.kind === 'agg') return;
+      const r = /^MOTE(\d+)-([TH])$/.exec(m.sensor_id); if (!r) return;
+      const id = +r[1], k = r[2], o = M[id] ??= { id, T: null, H: null, seen: 0 }, e = o[k] ??= { v: 0, a: false, pts: [], dg: 0, w: 100 };
+      e.v = m.value; e.a = m.anomaly; e.dg = m.dgim_count ?? 0; e.w = m.dgim_window ?? 100;
+      if (m.known_faulty) { KF[m.sensor_id] = 1; o.kf = true; BL = { n: m.bloom_n, fp: m.bloom_fp, m: m.bloom_bits, k: m.bloom_k }; }
+      if (!m.anomaly) e.good = m.value;
+      e.pts.push({ t: new Date(m.ts).toLocaleTimeString([], { hour12: false }), v: m.value, a: m.anomaly }); if (e.pts.length > MAXP) e.pts.shift();
+      o.seen = Date.now(); total++; perSec++;
+      if (m.anomaly) { anoms++; if (!e.la || Date.now() - e.la > 8000) { e.la = Date.now(); addAlert(id, k, m); } }
+      if (!sel && pos[id]) sel = id;
+    }
+    function addAlert(id, k, m) {
+      $('aEmpty').style.display = 'none';
+      const li = document.createElement('li'); li.className = m.severity;
+      li.innerHTML = '<b>Mote ' + id + '</b> ' + (k === 'T' ? 'temperature' : 'humidity') + ' read ' + m.value + ' ' + m.unit + '<span>' + (bounds && pos[id] ? ZN[zoneOf(id)] + ' area, ' : '') + m.severity + ', ' + new Date(m.ts).toLocaleTimeString([], { hour12: false }) + '</span>';
+      $('alerts').prepend(li); while ($('alerts').children.length > 15) $('alerts').lastChild.remove();
+    }
+    function renderZones() {
+      const z = ZN.map(() => ({ s: 0, n: 0, bad: 0, on: 0 }));
+      for (const id in M) {
+        if (!pos[id] || !bounds) continue; const m = M[id], k = m[metric]; if (!k || Date.now() - m.seen > 20000) continue;
+        const q = z[zoneOf(id)]; q.on++; if (k.a) q.bad++; if (k.good !== undefined) { q.s += k.good; q.n++; }
+      }
+      $('zones').innerHTML = z.map((q, i) => '<div class="z ' + (q.bad ? 'bad' : '') + '"><p>' + ZN[i] + '</p><b>' + (q.n ? (q.s / q.n).toFixed(1) + DOM[metric].u : '--') + '</b><small>' + q.on + ' online' + (q.bad ? ', ' + q.bad + ' faulty' : '') + '</small></div>').join('');
+    }
+    function renderSide() {
+      const m = M[sel]; if (!m) return;
+      $('sTitle').textContent = 'Mote ' + sel + (bounds ? ' (' + ZN[zoneOf(sel)] + ' area)' : '') + (m.kf ? ', known faulty' : '');
+      $('sT').innerHTML = m.T ? m.T.v + '<small>°C</small>' : '--'; $('sH').innerHTML = m.H ? m.H.v + '<small>%</small>' : '--';
+      const k = m[metric], bad = k && k.a; $('sBadge').textContent = bad ? 'Fault' : 'Normal'; $('sBadge').className = 'badge' + (bad ? ' bad' : '');
+      if (!k) return;
+      $('sDg').textContent = DOM[metric].name + ': anomalies in the last ' + k.w + ' readings (DGIM estimate): ' + k.dg;
+      const ds = chart.data.datasets[0]; chart.data.labels = k.pts.map(p => p.t); ds.data = k.pts.map(p => p.v);
+      ds.pointRadius = k.pts.map(p => p.a ? 5 : 0); ds.pointBackgroundColor = k.pts.map(p => p.a ? '#c2185b' : '#2a5bd7');
+      let lo = Math.min(...ds.data), hi = Math.max(...ds.data); const ms = metric === 'T' ? 2 : 6;
+      if (hi - lo < ms) { const c = (hi + lo) / 2; lo = c - ms / 2; hi = c + ms / 2; }
+      const p = (hi - lo) * .08; chart.options.scales.y.min = lo - p; chart.options.scales.y.max = hi + p; chart.update();
+    }
+    function renderKF() {
+      const ids = Object.keys(KF);
+      $('kf').innerHTML = ids.map(i => '<li data-m="' + i.replace(/\D/g, '') + '"><b>' + i + '</b><span>Stored in the Bloom filter</span></li>').join('');
+      $('kfNote').textContent = ids.length ? 'Bloom filter: ' + BL.n + ' sensors in ' + BL.m + ' bits with ' + BL.k + ' hash functions. Estimated false-positive rate: ' + (BL.fp * 100).toFixed(4) + '%. Click a sensor to select its mote.' : 'None yet. A sensor joins this list after 5 or more anomalies in its last 100 readings (counted with DGIM).';
+    }
+    $('kf').addEventListener('click', e => { const li = e.target.closest('li'); if (li) { sel = +li.dataset.m; renderSide(); } });
+    function render() {
+      $('kOn').textContent = Object.values(M).filter(m => Date.now() - m.seen < 20000).length;
+      $('kTotal').textContent = total.toLocaleString(); $('kAnom').textContent = anoms;
+      heat(); renderZones(); renderSide(); renderKF();
+    }
+    setInterval(render, 600);
+    setInterval(() => { $('kRate').textContent = perSec; perSec = 0; }, 1000);
+    function setMetric(k) {
+      metric = k; $('bT').className = k === 'T' ? 'on' : ''; $('bH').className = k === 'H' ? 'on' : '';
+      $('mapTitle').textContent = 'Lab floor plan: ' + DOM[k].name.toLowerCase(); render();
+    }
+    $('bT').onclick = () => setMetric('T'); $('bH').onclick = () => setMetric('H');
+
+    /* ---------- connection with demo fallback ---------- */
+    let ws, demo = null;
+    function setConn(c, t) { $('conn').className = 'conn ' + c; $('connTxt').textContent = t; }
+    function connect() {
+      ws = new WebSocket('ws://' + (location.host || 'localhost:8000') + '/ws');
+      ws.onopen = () => { setConn('live', 'Live from Kafka'); if (demo) { clearInterval(demo); demo = null; } };
+      ws.onmessage = e => ingest(JSON.parse(e.data));
+      ws.onclose = () => { if (!demo) startDemo(); setTimeout(connect, 4000); };
+    }
+    function startDemo() {
+      setConn('demo', 'Demo mode: simulated data, backend not connected'); let t = 0;
+      demo = setInterval(() => {
+        t++;
+        Object.keys(pos).slice(0, 40).forEach(id => {
+          const p = pos[id];
+          [['T', 19 + 3 * Math.sin(t / 40) + p.x / 12 + (Math.random() - .5) * .2, '°C'], ['H', 40 - p.x / 10 + (Math.random() - .5) * .5, '%']].forEach(([k, v, u]) => {
+            const f = Math.random() < .004; if (f) v = k === 'T' ? 122.15 : -3.92;
+            ingest({ kind: 'reading', sensor_id: 'MOTE' + String(id).padStart(2, '0') + '-' + k, value: +v.toFixed(2), unit: u, ts: Date.now(), anomaly: f, severity: f ? 'critical' : 'ok', dgim_count: f ? 1 : 0, dgim_window: 100 });
+          });
+        });
+      }, 1000);
+    }
+    loadLayout().then(() => { connect(); draw(); });
+  </script>
+</body>
+
+</html>
